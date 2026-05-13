@@ -1,0 +1,15 @@
+{
+  "name": "silent-voice-ar",
+  "version": "1.0.0",
+  "description": "AR web app for ISL sign language translation — deployed on Vercel",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
