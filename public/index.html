@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SilentVoice AR</title>
+  <link rel="manifest" href="../public/manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a2e;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* TOP HEADER */
+    .header {
+      width: 100%;
+      padding: 15px 20px;
+      background: #16213e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 1.3rem;
+      color: #00d4ff;
+    }
+
+    .mode-toggle {
+      background: #0f3460;
+      border: none;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .mode-toggle.active {
+      background: #00d4ff;
+      color: #1a1a2e;
+    }
+
+    /* CAMERA SECTION */
+    .camera-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin-top: 10px;
+    min-height: 300px;
+    background: #000;
+    border-radius: 15px;
+    }    
+
+    #video {
+      width: 100%;
+      border-radius: 15px;
+      display: block;
+    }
+
+    #canvas {
+    width: 100%;
+    border-radius: 15px;
+    display: block;
+    background: #000;
+    }    
+
+    /* AR STATUS BADGE */
+    .ar-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 212, 255, 0.2);
+      border: 1px solid #00d4ff;
+      color: #00d4ff;
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+    }
+
+    /* BOTTOM PANEL */
+    .bottom-panel {
+      width: 100%;
+      max-width: 500px;
+      margin-top: 15px;
+      padding: 20px;
+      background: #16213e;
+      border-radius: 20px;
+    }
+
+    .detected-gesture {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 5px;
+    }
+
+    .translation-text {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #00d4ff;
+      min-height: 40px;
+      margin-bottom: 15px;
+    }
+
+    .speak-btn {
+      width: 100%;
+      padding: 12px;
+      background: #00d4ff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .speak-btn:hover {
+      background: #00b8d9;
+    }
+
+    /* MODE LABEL */
+    .mode-label {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    /* LOADING STATE */
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>🤟 SilentVoice AR</h1>
+    <button class="mode-toggle" id="modeBtn" onclick="toggleMode()">
+      Mode: Deaf → Hearing
+    </button>
+  </div>
+
+  <!-- CAMERA + AR CANVAS -->
+  <div class="camera-container">
+    <video id="video" autoplay playsinline style="display:none"></video>
+    <canvas id="canvas"></canvas>
+    <div class="ar-badge">● AR LIVE</div>
+  </div>
+
+  <!-- BOTTOM PANEL -->
+  <div class="bottom-panel">
+    <div class="detected-gesture" id="gestureLabel">
+      Waiting for gesture...
+    </div>
+    <div class="translation-text" id="translationText">
+      —
+    </div>
+    <button class="speak-btn" onclick="speakText()">
+      🔊 Speak Translation
+    </button>
+    <div class="mode-label" id="modeLabel">
+      Deaf person signs → Hearing person reads
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+<!-- Replace old scripts with these -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="../src/app.js"></script>
+
+</body>
+</html>
