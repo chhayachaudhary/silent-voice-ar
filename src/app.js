@@ -1,201 +1,236 @@
 // ================================
-// SILENT VOICE AR - MEDIAPIPE HANDS
+// SILENTVOICE AR — COMPLETE APP
 // ================================
 
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const gestureLabel = document.getElementById('gestureLabel');
+// --- HTML Elements ---
+const video           = document.getElementById('video');
+const canvas          = document.getElementById('output_canvas');
+const ctx             = canvas.getContext('2d');
+const gestureLabel    = document.getElementById('gestureLabel');
 const translationText = document.getElementById('translationText');
-const modeBtn = document.getElementById('modeBtn');
-const modeLabel = document.getElementById('modeLabel');
-let currentMode = 'deaf-to-hearing';
-let lastGesture = '';
-let lastGestureTime = 0;
-const GESTURE_COOLDOWN = 2000; // 2 seconds
-let gestureBuffer = [];
-const BUFFER_SIZE = 20; // frames to confirm
+const progressBar     = document.getElementById('progressBar');
+const modeBtn         = document.getElementById('modeBtn');
+const modeLabel       = document.getElementById('modeLabel');
+const speakBtn        = document.getElementById('speakBtn');
+const statusDot       = document.getElementById('statusDot');
+const confidenceBadge = document.getElementById('confidenceBadge');
+const clearBtn        = document.getElementById('clearBtn');
+const loadingOverlay  = document.getElementById('loadingOverlay');
 
-// --- ISL GESTURE DICTIONARY ---
+// Force hide loading after 5 seconds no matter what
+setTimeout(() => {
+  loadingOverlay.classList.add('hidden');
+}, 5000);
+
+// --- State ---
+let currentMode     = 'deaf-to-hearing';
+let lastGesture     = '';
+let lastGestureTime = 0;
+let gestureBuffer   = [];
+const BUFFER_SIZE   = 20;
+const COOLDOWN_MS   = 2000;
+
+// --- ISL Dictionary ---
 const ISL_GESTURES = {
-  'open_hand':     '🙏 Hello / Namaste',
-  'fist':          '✋ No / Stop',
-  'pointing_up':   '☝️ Yes / Correct',
-  'thumbs_up':     '👍 Good / Thank you',
-  'peace':         '✌️ Help me',
-  'pinch':         '🤏 Pain / Hurts here',
-  'three_fingers': '💧 Water / I am thirsty',
-  'four_fingers':  '💊 Medicine needed',
-  'ok_sign':       '👌 I understand',
+  open_hand:     '🙏 Hello / Namaste',
+  fist:          '✋ No / Stop',
+  pointing_up:   '☝️ Yes / I agree',
+  thumbs_up:     '👍 Good / Thank you',
+  peace:         '✌️ Help me',
+  three_fingers: '💧 Water / Thirsty',
+  four_fingers:  '💊 Medicine needed',
+  ok_sign:       '👌 I understand / OK',
+  pinch:         '🤏 Pain / Hurts here',
+  call_me:       '🤙 Call my family',
 };
 
 // ================================
-// SETUP CANVAS SIZE
-// ================================
-canvas.width = 640;
-canvas.height = 480;
-
-// ================================
-// MEDIAPIPE HANDS SETUP
+// MEDIAPIPE SETUP
 // ================================
 const hands = new Hands({
-  locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-  }
+  locateFile: file =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
 
 hands.setOptions({
   maxNumHands: 1,
   modelComplexity: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.5
+  minDetectionConfidence: 0.75,
+  minTrackingConfidence: 0.5,
 });
 
 // ================================
-// PROCESS FRAME
+// PROCESS EACH FRAME
 // ================================
-hands.onResults((results) => {
-  // Clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+hands.onResults(results => {
+  const w = canvas.width;
+  const h = canvas.height;
 
-  // Draw camera feed on canvas first
+  // 1) Clear
+  ctx.clearRect(0, 0, w, h);
+
+  // 2) Draw LIVE mirrored video
   ctx.save();
-  ctx.scale(-1, 1); // mirror the image
-  ctx.translate(-canvas.width, 0);
-  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  ctx.scale(-1, 1);
+  ctx.translate(-w, 0);
+  ctx.drawImage(results.image, 0, 0, w, h);
   ctx.restore();
 
-  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-    const landmarks = results.multiHandLandmarks[0];
+  // 3) Hand detected?
+  if (results.multiHandLandmarks?.length > 0) {
+    const lm = results.multiHandLandmarks[0];
+
+    // Mirror landmarks for display
+    const mirrored = lm.map(p => ({ x: 1 - p.x, y: p.y, z: p.z }));
 
     // Draw AR skeleton
-    drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-      color: 'rgba(0, 212, 255, 0.7)',
-      lineWidth: 3
+    drawConnectors(ctx, mirrored, HAND_CONNECTIONS, {
+      color: 'rgba(45, 212, 191, 0.8)', lineWidth: 3
     });
-    drawLandmarks(ctx, landmarks, {
-      color: '#00d4ff',
-      lineWidth: 1,
-      radius: 5
+    drawLandmarks(ctx, mirrored, {
+      color: '#2dd4bf', lineWidth: 1, radius: 4
     });
 
     // Recognize gesture
-    const gesture = recognizeGesture(landmarks);
-    const gesture = recognizeGesture(landmarks);
-
-    // Add to buffer
-    gestureBuffer.push(gesture);
-    if (gestureBuffer.length > BUFFER_SIZE) {
-    gestureBuffer.shift(); // remove oldest
-    }
-
-    // Only confirm if last 20 frames show SAME gesture
-    const allSame = gestureBuffer.every(g => g === gesture);
-    const now = Date.now();
-
-    if (
-    gesture &&
-    allSame &&
-    gesture !== lastGesture &&
-    (now - lastGestureTime) > GESTURE_COOLDOWN
-    ) {
-    lastGesture = gesture;
-    lastGestureTime = now;
-    updateTranslation(gesture);
-    }
-
-    gestureLabel.textContent = `✋ Hand detected — gesture: ${lastGesture || 'analyzing...'}`;
+    const gesture = recognizeGesture(lm);
+    updateBuffer(gesture);
 
   } else {
-    gestureLabel.textContent = '👋 Show your hand to camera...';
-    lastGesture = '';
+    gestureLabel.textContent = 'Show your hand to camera...';
+    gestureBuffer = [];
+    progressBar.style.width = '0%';
+    statusDot.classList.remove('active');
+    confidenceBadge.textContent = 'Scanning...';
+    confidenceBadge.classList.remove('high');
   }
 });
 
 // ================================
-// START CAMERA
+// CAMERA
 // ================================
-// Set canvas size to match window
-canvas.width = window.innerWidth > 600 ? 640 : window.innerWidth - 40;
-canvas.height = canvas.width * 0.75;
-
 const camera = new Camera(video, {
   onFrame: async () => {
+    if (video.videoWidth) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
     await hands.send({ image: video });
   },
   width: 640,
-  height: 480
+  height: 480,
 });
 
 camera.start()
   .then(() => {
-    gestureLabel.textContent = '✅ Camera ready! Show your hand...';
-    console.log('Camera started!');
+    gestureLabel.textContent = 'Show your hand to camera...';
+    setTimeout(() => {
+      loadingOverlay.classList.add('hidden');
+    }, 1000);
   })
-  .catch((err) => {
-    console.error('Camera error:', err);
+  .catch(err => {
     gestureLabel.textContent = '❌ Camera error: ' + err.message;
+    loadingOverlay.classList.add('hidden');
   });
 
 // ================================
-// RECOGNIZE GESTURE FROM LANDMARKS
+// GESTURE BUFFER + COOLDOWN
 // ================================
-function recognizeGesture(landmarks) {
-  // MediaPipe landmarks are normalized 0-1
-  // landmarks[i].y — smaller = higher on screen
+function updateBuffer(gesture) {
+  gestureBuffer.push(gesture);
+  if (gestureBuffer.length > BUFFER_SIZE) gestureBuffer.shift();
 
-  const wrist      = landmarks[0];
-  const thumbTip   = landmarks[4];
-  const indexBase  = landmarks[5];
-  const indexTip   = landmarks[8];
-  const middleBase = landmarks[9];
-  const middleTip  = landmarks[12];
-  const ringBase   = landmarks[13];
-  const ringTip    = landmarks[16];
-  const pinkyBase  = landmarks[17];
-  const pinkyTip   = landmarks[20];
+  const allSame = gestureBuffer.length === BUFFER_SIZE &&
+                  gestureBuffer.every(g => g === gesture);
 
-  // Finger extended = tip ABOVE base (smaller Y value)
-  const indexUp  = indexTip.y  < indexBase.y  - 0.04;
-  const middleUp = middleTip.y < middleBase.y - 0.04;
-  const ringUp   = ringTip.y   < ringBase.y   - 0.04;
-  const pinkyUp  = pinkyTip.y  < pinkyBase.y  - 0.04;
-  const thumbUp  = Math.abs(thumbTip.x - wrist.x) > 0.1;
+  const progress =
+    (gestureBuffer.filter(g => g === gesture).length / BUFFER_SIZE) * 100;
+  progressBar.style.width = progress + '%';
 
-  console.log('Fingers up:', { indexUp, middleUp, ringUp, pinkyUp, thumbUp });
+  const now = Date.now();
+  if (
+    gesture &&
+    allSame &&
+    gesture !== lastGesture &&
+    now - lastGestureTime > COOLDOWN_MS
+  ) {
+    lastGesture     = gesture;
+    lastGestureTime = now;
+    progressBar.style.width = '0%';
+    showTranslation(gesture);
+  }
 
-  // Gesture rules
-  if (indexUp && middleUp && ringUp && pinkyUp)              return 'open_hand';
-  if (!indexUp && !middleUp && !ringUp && !pinkyUp)          return 'fist';
-  if (indexUp && !middleUp && !ringUp && !pinkyUp)           return 'pointing_up';
-  if (indexUp && middleUp && !ringUp && !pinkyUp)            return 'peace';
-  if (indexUp && middleUp && ringUp && !pinkyUp)             return 'three_fingers';
-  if (indexUp && middleUp && ringUp && pinkyUp && !thumbUp)  return 'four_fingers';
-  if (thumbUp && !indexUp && !middleUp && !ringUp && !pinkyUp) return 'thumbs_up';
+  gestureLabel.textContent =
+    `✋ Detected: ${gesture || 'analyzing...'} — confirmed: ${lastGesture || 'none'}`;
+}
+
+// ================================
+// RECOGNIZE GESTURE
+// ================================
+function recognizeGesture(lm) {
+  const isUp = (tipIdx, baseIdx) =>
+    lm[tipIdx].y < lm[baseIdx].y - 0.02;
+
+  const distance = (a, b) => Math.sqrt(
+    Math.pow(lm[a].x - lm[b].x, 2) +
+    Math.pow(lm[a].y - lm[b].y, 2)
+  );
+
+  const indexUp  = isUp(8,  5);
+  const middleUp = isUp(12, 9);
+  const ringUp   = isUp(16, 13);
+  const pinkyUp  = isUp(20, 17);
+  const thumbOut = Math.abs(lm[4].x - lm[0].x) > 0.1;
+
+  const thumbIndexDist = distance(4, 8);
+  const isOkSign  = thumbIndexDist < 0.08 && middleUp && ringUp && pinkyUp;
+  const isPinch   = thumbIndexDist < 0.08 && !middleUp && !ringUp && !pinkyUp;
+  const isCallMe  = thumbOut && pinkyUp && !indexUp && !middleUp && !ringUp;
+
+  // Order matters — specific checks first!
+  if (isOkSign)  return 'ok_sign';
+  if (isPinch)   return 'pinch';
+  if (isCallMe)  return 'call_me';
+
+  if ( indexUp &&  middleUp &&  ringUp &&  pinkyUp) return 'open_hand';
+  if (!indexUp && !middleUp && !ringUp && !pinkyUp) return 'fist';
+  if ( indexUp && !middleUp && !ringUp && !pinkyUp) return 'pointing_up';
+  if ( indexUp &&  middleUp && !ringUp && !pinkyUp) return 'peace';
+  if ( indexUp &&  middleUp &&  ringUp && !pinkyUp) return 'three_fingers';
+  if ( indexUp &&  middleUp &&  ringUp &&  pinkyUp && !thumbOut) return 'four_fingers';
+  if (!indexUp && !middleUp && !ringUp && !pinkyUp &&  thumbOut) return 'thumbs_up';
 
   return null;
 }
 
 // ================================
-// UPDATE UI
+// SHOW TRANSLATION
 // ================================
-function updateTranslation(gestureKey) {
-  const translation = ISL_GESTURES[gestureKey];
-  if (translation) {
-    translationText.textContent = translation;
-    if (currentMode === 'deaf-to-hearing') {
-      setTimeout(() => speakText(), 500);
-    }
+function showTranslation(gestureKey) {
+  const text = ISL_GESTURES[gestureKey];
+  if (!text) return;
+
+  // Animate text change
+  translationText.classList.remove('updated');
+  void translationText.offsetWidth;
+  translationText.textContent = text;
+  translationText.classList.add('updated');
+
+  // Update UI state
+  statusDot.classList.add('active');
+  confidenceBadge.textContent = '● Confirmed';
+  confidenceBadge.classList.add('high');
+
+  if (currentMode === 'deaf-to-hearing') {
+    setTimeout(speakText, 400);
   }
 }
 
 // ================================
-// SPEAK TEXT
+// SPEAK
 // ================================
 function speakText() {
   const text = translationText.textContent;
   if (!text || text === '—') return;
-
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'en-IN';
   utterance.rate = 0.9;
@@ -208,12 +243,12 @@ function speakText() {
 function toggleMode() {
   if (currentMode === 'deaf-to-hearing') {
     currentMode = 'hearing-to-deaf';
-    modeBtn.textContent = 'Mode: Hearing → Deaf';
+    modeBtn.textContent = 'Hearing → Deaf';
     modeBtn.classList.add('active');
     modeLabel.textContent = 'Hearing person speaks → Deaf person sees signs';
   } else {
     currentMode = 'deaf-to-hearing';
-    modeBtn.textContent = 'Mode: Deaf → Hearing';
+    modeBtn.textContent = 'Deaf → Hearing';
     modeBtn.classList.remove('active');
     modeLabel.textContent = 'Deaf person signs → Hearing person reads';
   }
@@ -222,5 +257,24 @@ function toggleMode() {
 // ================================
 // BUTTON LISTENERS
 // ================================
-document.getElementById('speakBtn').addEventListener('click', speakText);
-document.getElementById('modeBtn').addEventListener('click', toggleMode);
+speakBtn.addEventListener('click', () => {
+  speakText();
+  speakBtn.classList.add('speaking');
+  speakBtn.textContent = '🔊 Speaking...';
+  setTimeout(() => {
+    speakBtn.classList.remove('speaking');
+    speakBtn.innerHTML = '🔊 Speak Translation';
+  }, 2000);
+});
+
+modeBtn.addEventListener('click', toggleMode);
+
+clearBtn.addEventListener('click', () => {
+  translationText.textContent = '—';
+  gestureLabel.textContent = 'Show your hand to camera...';
+  lastGesture = '';
+  statusDot.classList.remove('active');
+  confidenceBadge.textContent = 'Scanning...';
+  confidenceBadge.classList.remove('high');
+  progressBar.style.width = '0%';
+});

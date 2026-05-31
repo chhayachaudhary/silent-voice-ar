@@ -4,184 +4,685 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SilentVoice AR</title>
-  <link rel="manifest" href="../public/manifest.json">
-  <meta name="theme-color" content="#1a1a2e">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d2b2b">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    * {
+    /* ================================
+       DESIGN TOKENS
+    ================================ */
+    :root {
+      --bg-primary:     #0a1f1f;
+      --bg-secondary:   #0d2b2b;
+      --bg-card:        rgba(255, 255, 255, 0.05);
+      --bg-card-hover:  rgba(255, 255, 255, 0.08);
+
+      --teal-primary:   #2dd4bf;
+      --teal-secondary: #14b8a6;
+      --teal-dim:       rgba(45, 212, 191, 0.15);
+      --teal-glow:      rgba(45, 212, 191, 0.3);
+
+      --text-primary:   #f0fafa;
+      --text-secondary: #94a3b8;
+      --text-dim:       #4a6370;
+
+      --glass-bg:       rgba(13, 43, 43, 0.6);
+      --glass-border:   rgba(45, 212, 191, 0.15);
+      --glass-blur:     blur(20px);
+
+      --radius-sm:  10px;
+      --radius-md:  16px;
+      --radius-lg:  24px;
+      --radius-xl:  32px;
+
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ================================
+       RESET + BASE
+    ================================ */
+    *, *::before, *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
+    html {
+      height: 100%;
+      scroll-behavior: smooth;
+    }
+
     body {
-      background: #1a1a2e;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-      height: 100vh;
+      min-height: 100vh;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
+
+      /* Subtle background pattern */
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(45,212,191,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(20,184,166,0.06) 0%, transparent 50%);
     }
 
-    /* TOP HEADER */
+    /* ================================
+       HEADER
+    ================================ */
     .header {
       width: 100%;
-      padding: 15px 20px;
-      background: #16213e;
+      padding: 16px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--glass-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
-    .header h1 {
-      font-size: 1.3rem;
-      color: #00d4ff;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--teal-dim);
+      border: 1px solid var(--teal-primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      animation: pulse-border 3s infinite;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-text span {
+      color: var(--teal-primary);
     }
 
     .mode-toggle {
-      background: #0f3460;
-      border: none;
-      color: white;
-      padding: 8px 15px;
-      border-radius: 20px;
+      background: var(--teal-dim);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: 100px;
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .mode-toggle:hover {
+      background: var(--teal-primary);
+      color: var(--bg-primary);
+      border-color: var(--teal-primary);
     }
 
     .mode-toggle.active {
-      background: #00d4ff;
-      color: #1a1a2e;
+      background: var(--teal-primary);
+      color: var(--bg-primary);
+      border-color: var(--teal-primary);
     }
 
-    /* CAMERA SECTION */
-    .camera-container {
-    position: relative;
-    width: 100%;
-    max-width: 500px;
-    margin-top: 10px;
-    min-height: 300px;
-    background: #000;
-    border-radius: 15px;
-    }    
+    /* ================================
+       MAIN CONTENT
+    ================================ */
+    .main {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ================================
+       CAMERA SECTION
+    ================================ */
+    .camera-wrapper {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 4/3;
+
+      /* Glassmorphism border */
+      border: 1px solid var(--glass-border);
+      box-shadow:
+        0 0 0 1px rgba(45,212,191,0.05),
+        0 20px 60px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
 
     #video {
-      width: 100%;
-      border-radius: 15px;
-      display: block;
+      display: none;
     }
 
-    #canvas {
-    width: 100%;
-    border-radius: 15px;
-    display: block;
-    background: #000;
-    }    
+    #output_canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
 
-    /* AR STATUS BADGE */
+    /* AR Badge */
     .ar-badge {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 212, 255, 0.2);
-      border: 1px solid #00d4ff;
-      color: #00d4ff;
-      padding: 4px 10px;
-      border-radius: 10px;
-      font-size: 0.75rem;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      color: var(--teal-primary);
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      z-index: 10;
     }
 
-    /* BOTTOM PANEL */
-    .bottom-panel {
-      width: 100%;
-      max-width: 500px;
-      margin-top: 15px;
+    .ar-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--teal-primary);
+      border-radius: 50%;
+      animation: blink 1.5s infinite;
+    }
+
+    /* Confidence badge */
+    .confidence-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      z-index: 10;
+      transition: var(--transition);
+    }
+
+    .confidence-badge.high {
+      color: var(--teal-primary);
+      border-color: var(--teal-glow);
+    }
+
+    /* Camera overlay gradient at bottom */
+    .camera-gradient {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: linear-gradient(transparent, rgba(10,31,31,0.6));
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ================================
+       TRANSLATION CARD
+    ================================ */
+    .translation-card {
+      background: var(--bg-card);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
       padding: 20px;
-      background: #16213e;
-      border-radius: 20px;
+      transition: var(--transition);
     }
 
-    .detected-gesture {
-      font-size: 0.85rem;
-      color: #888;
-      margin-bottom: 5px;
+    .translation-card:hover {
+      background: var(--bg-card-hover);
     }
 
-    .translation-text {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #00d4ff;
-      min-height: 40px;
-      margin-bottom: 15px;
+    .card-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
     }
 
-    .speak-btn {
+    .gesture-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+
+    .status-dot.active {
+      background: var(--teal-primary);
+      box-shadow: 0 0 8px var(--teal-glow);
+    }
+
+    .status-text {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* Progress bar */
+    .progress-track {
       width: 100%;
-      padding: 12px;
-      background: #00d4ff;
-      color: #1a1a2e;
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 100px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--teal-secondary), var(--teal-primary));
+      border-radius: 100px;
+      transition: width 0.1s ease;
+      box-shadow: 0 0 8px var(--teal-glow);
+    }
+
+    /* Translation text */
+    .translation-output {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      min-height: 50px;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      transition: var(--transition);
+
+      /* Subtle animation when text changes */
+      animation: none;
+    }
+
+    .translation-output.updated {
+      animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .translation-output .emoji {
+      font-size: 1.6rem;
+      margin-right: 6px;
+    }
+
+    /* ================================
+       ACTION BUTTONS
+    ================================ */
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-speak {
+      flex: 1;
+      padding: 14px 20px;
+      background: var(--teal-primary);
+      color: var(--bg-primary);
       border: none;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: bold;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
       cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: -0.2px;
+
+      box-shadow: 0 4px 20px rgba(45,212,191,0.25);
     }
 
-    .speak-btn:hover {
-      background: #00b8d9;
+    .btn-speak:hover {
+      background: #5eead4;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(45,212,191,0.35);
     }
 
-    /* MODE LABEL */
-    .mode-label {
+    .btn-speak:active {
+      transform: translateY(0);
+    }
+
+    .btn-speak.speaking {
+      background: var(--teal-secondary);
+      animation: speaking-pulse 1s infinite;
+    }
+
+    .btn-clear {
+      width: 50px;
+      height: 50px;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .btn-clear:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    /* ================================
+       MODE LABEL
+    ================================ */
+    .mode-info {
       text-align: center;
-      margin-top: 10px;
-      font-size: 0.8rem;
-      color: #888;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 400;
+      padding: 4px 0;
     }
 
-    /* LOADING STATE */
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: #888;
-      font-size: 0.9rem;
+    /* ================================
+       GESTURE HINTS
+    ================================ */
+    .hints-card {
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+    }
+
+    .hints-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .hints-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .hint-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+
+    .hint-item:hover {
+      background: var(--teal-dim);
+      border-color: var(--glass-border);
+    }
+
+    .hint-emoji {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .hint-text {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    /* ================================
+       ANIMATIONS
+    ================================ */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 0 0 var(--teal-glow); }
+      50%       { box-shadow: 0 0 0 4px transparent; }
+    }
+
+    @keyframes pop-in {
+      0%   { transform: scale(0.95); opacity: 0.5; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+
+    @keyframes speaking-pulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(45,212,191,0.25); }
+      50%       { box-shadow: 0 4px 30px rgba(45,212,191,0.5); }
+    }
+
+    @keyframes slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* Entrance animations */
+    .header        { animation: slide-up 0.4s ease both; }
+    .camera-wrapper{ animation: slide-up 0.5s 0.1s ease both; }
+    .translation-card { animation: slide-up 0.5s 0.2s ease both; }
+    .actions       { animation: slide-up 0.5s 0.3s ease both; }
+    .hints-card    { animation: slide-up 0.5s 0.4s ease both; }
+
+    /* ================================
+       DESKTOP ADJUSTMENTS
+    ================================ */
+    @media (min-width: 768px) {
+      .main {
+        max-width: 520px;
+        padding: 24px 20px;
+        gap: 18px;
+      }
+
+      .translation-output {
+        font-size: 2rem;
+      }
+
+      .logo-text {
+        font-size: 1.3rem;
+      }
+    }
+
+    /* ================================
+       LOADING STATE
+    ================================ */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--teal-dim);
+      border-top-color: var(--teal-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <div class="header">
-    <h1>🤟 SilentVoice AR</h1>
-    <button class="mode-toggle" id="modeBtn" onclick="toggleMode()">
-      Mode: Deaf → Hearing
-    </button>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading AI model...</div>
   </div>
 
-  <!-- CAMERA + AR CANVAS -->
-  <div class="camera-container">
-    <video id="video" autoplay playsinline style="display:none"></video>
-    <canvas id="canvas"></canvas>
-    <div class="ar-badge">● AR LIVE</div>
-  </div>
-
-  <!-- BOTTOM PANEL -->
-  <div class="bottom-panel">
-    <div class="detected-gesture" id="gestureLabel">
-      Waiting for gesture...
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🤟</div>
+      <div class="logo-text">Silent<span>Voice</span></div>
     </div>
-    <div class="translation-text" id="translationText">
-      —
-    </div>
-    <button class="speak-btn" onclick="speakText()">
-      🔊 Speak Translation
+    <button class="mode-toggle" id="modeBtn">
+      Deaf → Hearing
     </button>
-    <div class="mode-label" id="modeLabel">
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Camera -->
+    <div class="camera-wrapper">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="output_canvas"></canvas>
+      <div class="ar-badge">
+        <div class="ar-dot"></div>
+        AR LIVE
+      </div>
+      <div class="confidence-badge" id="confidenceBadge">
+        Initializing...
+      </div>
+      <div class="camera-gradient"></div>
+    </div>
+
+    <!-- Translation Card -->
+    <div class="translation-card">
+      <div class="card-label">Translation</div>
+
+      <div class="gesture-status">
+        <div class="status-dot" id="statusDot"></div>
+        <div class="status-text" id="gestureLabel">
+          Loading AI model...
+        </div>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-fill" id="progressBar"></div>
+      </div>
+
+      <div class="translation-output" id="translationText">
+        —
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <button class="btn-speak" id="speakBtn">
+        🔊 Speak Translation
+      </button>
+      <button class="btn-clear" id="clearBtn" title="Clear">
+        ✕
+      </button>
+    </div>
+
+    <!-- Mode label -->
+    <div class="mode-info" id="modeLabel">
       Deaf person signs → Hearing person reads
     </div>
-  </div>
 
-  <!-- SCRIPTS -->
-<!-- Replace old scripts with these -->
+    <!-- Gesture Hints -->
+    <div class="hints-card">
+      <div class="hints-title">Supported Signs</div>
+      <div class="hints-grid">
+        <div class="hint-item">
+          <span class="hint-emoji">🖐️</span>
+          <span class="hint-text">Open hand → Hello</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">✊</span>
+          <span class="hint-text">Fist → No / Stop</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">☝️</span>
+          <span class="hint-text">Point up → Yes</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">👍</span>
+          <span class="hint-text">Thumb up → Thank you</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">✌️</span>
+          <span class="hint-text">Peace → Help me</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">💧</span>
+          <span class="hint-text">3 fingers → Water</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">💊</span>
+          <span class="hint-text">4 fingers → Medicine</span>
+        </div>
+        <div class="hint-item">
+          <span class="hint-emoji">👌</span>
+          <span class="hint-text">OK sign → Understand</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MediaPipe -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
